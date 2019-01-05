@@ -1,0 +1,18 @@
+language: go
+
+os:
+  - linux
+  - osx
+
+go:
+  - tip
+  - 1.11.4
+
+script: ./build/test.sh -cv
+
+after_success:
+  - bash <(curl -s https://codecov.io/bash)
+
+matrix:
+  allow_failures:
+    - go: tip
