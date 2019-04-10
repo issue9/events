@@ -2,6 +2,7 @@
 // Use of this source code is governed by a MIT
 // license that can be found in the LICENSE file.
 
+// Package events 提供了简单的事件发布订阅功能
 package events
 
 import (
@@ -67,7 +68,10 @@ func (p *Publisher) Publish(data interface{}) error {
 
 // Destory 销毁当前事件处理程序
 func (p *Publisher) Destory() {
+	p.e.locker.Lock()
 	p.e.subscribers = nil
+	p.e.locker.Unlock()
+
 	p.e = nil
 }
 
