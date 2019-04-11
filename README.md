@@ -1,9 +1,21 @@
 events
 [![Build Status](https://travis-ci.org/issue9/events.svg?branch=master)](https://travis-ci.org/issue9/events)
+[![Go Report Card](https://goreportcard.com/badge/github.com/issue9/events)](https://goreportcard.com/report/github.com/issue9/events)
+[![license](https://img.shields.io/badge/license-MIT-brightgreen.svg?style=flat)](https://opensource.org/licenses/MIT)
+[![codecov](https://codecov.io/gh/issue9/events/branch/master/graph/badge.svg)](https://codecov.io/gh/issue9/events)
 ======
 
 
 简单的事件订阅发布系统
+
+```go
+p, e := events.New()
+
+e.Attach(sub1)
+e.Attach(sub2)
+
+p.Publish("触发事件1") // sub1 和 sub2 均会收事事件
+```
 
 
 
