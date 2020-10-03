@@ -8,7 +8,7 @@ import (
 	"sync"
 )
 
-// ErrStopped 表示发布都已经调用 Destory 销毁了事件处理器。
+// ErrStopped 表示发布都已经调用 Destory 销毁了事件处理器
 var ErrStopped = errors.New("该事件已经停止发布新内容")
 
 // Subscriber 订阅者函数
