@@ -1,6 +1,20 @@
 // SPDX-License-Identifier: MIT
 
 // Package events 提供了简单的事件发布订阅功能
+//
+//  p, e := events.New()
+//
+//  // 订阅事件
+//  e.Attach(func(data interface{}){
+//      fmt.Println("subscriber 1")
+//  })
+//
+//  // 订阅事件
+//  e.Attach(func(data interface{}){
+//      fmt.Println("subscriber 2")
+//  })
+//
+//  p.Publish(nil) // 发布事件
 package events
 
 import (
@@ -13,70 +27,75 @@ var ErrStopped = errors.New("该事件已经停止发布新内容")
 
 // Subscriber 订阅者函数
 //
-// 当存在多个订阅者时，通过 go 异步执行每个函数。
+// 每个订阅函数都是通过 go 异步执行。
 //
 // data 为事件传递过来的数据，可能存在多个订阅者，
-// 最好不要直接修改 data 数据，否则结果是未知的。
+// 用户不应该直接修改 data 数据，否则结果是未知的。
 type Subscriber func(data interface{})
 
-// Event 事件
-type Event struct {
+type event struct {
 	locker      sync.RWMutex
 	count       int
 	subscribers map[int]Subscriber
 }
 
 // Publisher 事件的发布者
-type Publisher struct {
-	e *Event
+type Publisher interface {
+	Publish(data interface{}) error
+	Destory()
+}
+
+// Eventer 供用户订阅事件的对象接口
+type Eventer interface {
+	Attach(Subscriber) int
+	Detach(int)
 }
 
 // New 声明一个新的事件处理
 //
 // Publisher 供事件发布者进行发布新事件；
 // Event 供订阅者订阅事件。
-func New() (*Publisher, *Event) {
-	e := &Event{
+func New() (Publisher, Eventer) {
+	e := &event{
 		subscribers: make(map[int]Subscriber, 5),
 	}
 
-	p := &Publisher{
-		e: e,
-	}
-
-	return p, e
+	return e, e
 }
 
 // Publish 触发事件
-func (p *Publisher) Publish(data interface{}) error {
-	if p.e == nil {
+func (e *event) Publish(data interface{}) error {
+	if e.subscribers == nil { // 初如化时将 subscribers 设置为了 5，所以为 nil 表示已经调用 Destory
 		return ErrStopped
 	}
 
-	p.e.locker.RLock()
-	for _, s := range p.e.subscribers {
+	e.locker.RLock()
+	defer e.locker.RUnlock()
+
+	if len(e.subscribers) == 0 {
+		return nil
+	}
+
+	for _, s := range e.subscribers {
 		go func(sub Subscriber) {
 			sub(data)
 		}(s)
 	}
-	p.e.locker.RUnlock()
 
 	return nil
 }
 
 // Destory 销毁当前事件处理程序
-func (p *Publisher) Destory() {
-	p.e.locker.Lock()
-	p.e.subscribers = nil
-	p.e.locker.Unlock()
-
-	p.e = nil
+func (e *event) Destory() {
+	e.locker.Lock()
+	e.subscribers = nil
+	e.locker.Unlock()
 }
 
 // Attach 注册订阅者
 //
 // 返回一个唯一 ID，用户可以使用此 ID 取消订阅
-func (e *Event) Attach(subscriber Subscriber) int {
+func (e *event) Attach(subscriber Subscriber) int {
 	ret := e.count
 
 	e.locker.Lock()
@@ -88,7 +107,7 @@ func (e *Event) Attach(subscriber Subscriber) int {
 }
 
 // Detach 取消订阅者
-func (e *Event) Detach(id int) {
+func (e *event) Detach(id int) {
 	e.locker.Lock()
 	delete(e.subscribers, id)
 	e.locker.Unlock()

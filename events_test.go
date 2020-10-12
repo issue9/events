@@ -27,10 +27,13 @@ func TestNew(t *testing.T) {
 	a.NotNil(p).NotNil(e)
 }
 
-func TestPublisher_Publich(t *testing.T) {
+func TestPublisher_Publish(t *testing.T) {
 	a := assert.New(t)
 	p, e := New()
 	a.NotNil(p).NotNil(e)
+
+	// 没有订阅者
+	a.NotError(p.Publish([]byte("123")))
 
 	buf1 := new(bytes.Buffer)
 	sub1 := func(data interface{}) {
@@ -74,29 +77,32 @@ func TestPublisher_Destory(t *testing.T) {
 	p, e := New()
 	a.NotNil(p).NotNil(e)
 	p.Destory()
-	a.Nil(p.e).
-		Nil(e.subscribers)
+	ee, ok := e.(*event)
+	a.True(ok).NotNil(ee).Nil(ee.subscribers)
 
 	p, e = New()
 	a.NotNil(p).NotNil(e)
 	e.Attach(s1)
 	p.Destory()
-	a.Nil(p.e).
-		Nil(e.subscribers)
+	ee, ok = e.(*event)
+	a.True(ok).NotNil(ee).Nil(ee.subscribers)
 }
 
-func TestEvent_Attach_Detach(t *testing.T) {
+func TestEventer_Attach_Detach(t *testing.T) {
 	a := assert.New(t)
 	p, e := New()
 	a.NotNil(p).NotNil(e)
 
 	id1 := e.Attach(s1)
 	id2 := e.Attach(s2)
-	a.Equal(len(e.subscribers), 2)
+	ee, ok := e.(*event)
+	a.True(ok).NotNil(ee)
+
+	a.Equal(len(ee.subscribers), 2)
 
 	e.Detach(id1)
-	a.Equal(len(e.subscribers), 1)
+	a.Equal(len(ee.subscribers), 1)
 
 	e.Detach(id2)
-	a.Equal(len(e.subscribers), 0)
+	a.Equal(len(ee.subscribers), 0)
 }
