@@ -41,13 +41,21 @@ type event struct {
 
 // Publisher 事件的发布者
 type Publisher interface {
+	// 触发事件
 	Publish(data interface{}) error
+
+	// 销毁当前事件处理程序
 	Destory()
 }
 
 // Eventer 供用户订阅事件的对象接口
 type Eventer interface {
+	// 注册订阅者
+	//
+	// 返回一个唯一 ID，用户可以使用此 ID 取消订阅。
 	Attach(Subscriber) int
+
+	// 取消指定事件的订阅
 	Detach(int)
 }
 
@@ -63,7 +71,6 @@ func New() (Publisher, Eventer) {
 	return e, e
 }
 
-// Publish 触发事件
 func (e *event) Publish(data interface{}) error {
 	if e.subscribers == nil { // 初如化时将 subscribers 设置为了 5，所以为 nil 表示已经调用 Destory
 		return ErrStopped
@@ -85,16 +92,12 @@ func (e *event) Publish(data interface{}) error {
 	return nil
 }
 
-// Destory 销毁当前事件处理程序
 func (e *event) Destory() {
 	e.locker.Lock()
 	e.subscribers = nil
 	e.locker.Unlock()
 }
 
-// Attach 注册订阅者
-//
-// 返回一个唯一 ID，用户可以使用此 ID 取消订阅
 func (e *event) Attach(subscriber Subscriber) int {
 	ret := e.count
 
@@ -106,7 +109,6 @@ func (e *event) Attach(subscriber Subscriber) int {
 	return ret
 }
 
-// Detach 取消订阅者
 func (e *event) Detach(id int) {
 	e.locker.Lock()
 	delete(e.subscribers, id)
