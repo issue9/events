@@ -33,7 +33,7 @@ func TestPublisher_Publish(t *testing.T) {
 	a.NotNil(p).NotNil(e)
 
 	// 没有订阅者
-	a.NotError(p.Publish([]byte("123")))
+	a.NotError(p.Publish(true, []byte("123")))
 
 	buf1 := new(bytes.Buffer)
 	sub1 := func(data interface{}) {
@@ -45,8 +45,9 @@ func TestPublisher_Publish(t *testing.T) {
 		buf2.Write(data.([]byte))
 	}
 
-	id1 := e.Attach(sub1)
-	p.Publish([]byte("p1"))
+	id1, err := e.Attach(sub1)
+	a.NotError(err)
+	p.Publish(true, []byte("p1"))
 	time.Sleep(time.Microsecond * 500)
 	a.NotError(a.Equal(buf1.String(), "p1"))
 	a.Empty(buf2.Bytes())
@@ -54,7 +55,7 @@ func TestPublisher_Publish(t *testing.T) {
 	buf1.Reset()
 	buf2.Reset()
 	e.Attach(sub2)
-	a.NotError(p.Publish([]byte("p2")))
+	a.NotError(p.Publish(false, []byte("p2")))
 	time.Sleep(time.Microsecond * 500)
 	a.Equal(buf1.String(), "p2")
 	a.Equal(buf2.String(), "p2")
@@ -62,13 +63,13 @@ func TestPublisher_Publish(t *testing.T) {
 	buf1.Reset()
 	buf2.Reset()
 	e.Detach(id1)
-	a.NotError(p.Publish([]byte("p3")))
+	a.NotError(p.Publish(false, []byte("p3")))
 	time.Sleep(time.Microsecond * 500)
 	a.Empty(buf1.String())
 	a.Equal(buf2.String(), "p3")
 
 	p.Destory()
-	a.Error(p.Publish("p4"))
+	a.Error(p.Publish(false, "p4"))
 }
 
 func TestPublisher_Destory(t *testing.T) {
@@ -93,8 +94,10 @@ func TestEventer_Attach_Detach(t *testing.T) {
 	p, e := New()
 	a.NotNil(p).NotNil(e)
 
-	id1 := e.Attach(s1)
-	id2 := e.Attach(s2)
+	id1, err := e.Attach(s1)
+	a.NotError(err)
+	id2, err := e.Attach(s2)
+	a.NotError(err)
 	ee, ok := e.(*event)
 	a.True(ok).NotNil(ee)
 
@@ -105,4 +108,9 @@ func TestEventer_Attach_Detach(t *testing.T) {
 
 	e.Detach(id2)
 	a.Equal(len(ee.subscribers), 0)
+
+	// Destory
+
+	p.Destory()
+	e.Attach(s1)
 }

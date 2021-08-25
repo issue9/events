@@ -14,7 +14,7 @@
 //      fmt.Println("subscriber 2")
 //  })
 //
-//  p.Publish(nil) // 发布事件
+//  p.Publish(true, nil) // 发布事件
 package events
 
 import (
@@ -42,7 +42,10 @@ type event struct {
 // Publisher 事件的发布者
 type Publisher interface {
 	// 触发事件
-	Publish(data interface{}) error
+	//
+	// sync 表示订阅者是否以异步的方式执行；
+	// data 传递给订阅者的数据；
+	Publish(sync bool, data interface{}) error
 
 	// 销毁当前事件处理程序
 	Destory()
@@ -52,8 +55,8 @@ type Publisher interface {
 type Eventer interface {
 	// 注册订阅者
 	//
-	// 返回一个唯一 ID，用户可以使用此 ID 取消订阅。
-	Attach(Subscriber) int
+	// 返回唯一 ID，用户可以使用此 ID 取消订阅。
+	Attach(Subscriber) (int, error)
 
 	// 取消指定事件的订阅
 	Detach(int)
@@ -71,7 +74,7 @@ func New() (Publisher, Eventer) {
 	return e, e
 }
 
-func (e *event) Publish(data interface{}) error {
+func (e *event) Publish(sync bool, data interface{}) error {
 	if e.subscribers == nil { // 初如化时将 subscribers 设置为了 5，所以为 nil 表示已经调用 Destory
 		return ErrStopped
 	}
@@ -83,10 +86,16 @@ func (e *event) Publish(data interface{}) error {
 		return nil
 	}
 
-	for _, s := range e.subscribers {
-		go func(sub Subscriber) {
-			sub(data)
-		}(s)
+	if sync {
+		for _, s := range e.subscribers {
+			go func(sub Subscriber) {
+				sub(data)
+			}(s)
+		}
+	} else {
+		for _, s := range e.subscribers {
+			s(data)
+		}
 	}
 
 	return nil
@@ -98,7 +107,11 @@ func (e *event) Destory() {
 	e.locker.Unlock()
 }
 
-func (e *event) Attach(subscriber Subscriber) int {
+func (e *event) Attach(subscriber Subscriber) (int, error) {
+	if e.subscribers == nil {
+		return 0, ErrStopped
+	}
+
 	ret := e.count
 
 	e.locker.Lock()
@@ -106,7 +119,7 @@ func (e *event) Attach(subscriber Subscriber) int {
 	e.subscribers[ret] = subscriber
 	e.locker.Unlock()
 
-	return ret
+	return ret, nil
 }
 
 func (e *event) Detach(id int) {
