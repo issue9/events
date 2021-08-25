@@ -13,7 +13,7 @@ p, e := events.New()
 e.Attach(sub1)
 e.Attach(sub2)
 
-p.Publish("触发事件1") // sub1 和 sub2 均会收事事件
+p.Publish(true, "触发事件1") // sub1 和 sub2 均会收事事件
 ```
 
 安装
