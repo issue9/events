@@ -7,7 +7,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/issue9/assert"
+	"github.com/issue9/assert/v2"
 )
 
 var (
@@ -21,14 +21,14 @@ var (
 )
 
 func TestNew(t *testing.T) {
-	a := assert.New(t)
+	a := assert.New(t, false)
 
 	p, e := New()
 	a.NotNil(p).NotNil(e)
 }
 
 func TestPublisher_Publish(t *testing.T) {
-	a := assert.New(t)
+	a := assert.New(t, false)
 	p, e := New()
 	a.NotNil(p).NotNil(e)
 
@@ -49,7 +49,7 @@ func TestPublisher_Publish(t *testing.T) {
 	a.NotError(err)
 	p.Publish(true, []byte("p1"))
 	time.Sleep(time.Microsecond * 500)
-	a.NotError(a.Equal(buf1.String(), "p1"))
+	a.Equal(buf1.String(), "p1")
 	a.Empty(buf2.Bytes())
 
 	buf1.Reset()
@@ -73,7 +73,7 @@ func TestPublisher_Publish(t *testing.T) {
 }
 
 func TestPublisher_Destory(t *testing.T) {
-	a := assert.New(t)
+	a := assert.New(t, false)
 
 	p, e := New()
 	a.NotNil(p).NotNil(e)
@@ -90,7 +90,7 @@ func TestPublisher_Destory(t *testing.T) {
 }
 
 func TestEventer_Attach_Detach(t *testing.T) {
-	a := assert.New(t)
+	a := assert.New(t, false)
 	p, e := New()
 	a.NotNil(p).NotNil(e)
 
