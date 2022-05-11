@@ -68,23 +68,23 @@ func TestPublisher_Publish(t *testing.T) {
 	a.Empty(buf1.String())
 	a.Equal(buf2.String(), "p3")
 
-	p.Destory()
+	p.Destroy()
 	a.Error(p.Publish(false, "p4"))
 }
 
-func TestPublisher_Destory(t *testing.T) {
+func TestPublisher_Destroy(t *testing.T) {
 	a := assert.New(t, false)
 
 	p, e := New()
 	a.NotNil(p).NotNil(e)
-	p.Destory()
+	p.Destroy()
 	ee, ok := e.(*event)
 	a.True(ok).NotNil(ee).Nil(ee.subscribers)
 
 	p, e = New()
 	a.NotNil(p).NotNil(e)
 	e.Attach(s1)
-	p.Destory()
+	p.Destroy()
 	ee, ok = e.(*event)
 	a.True(ok).NotNil(ee).Nil(ee.subscribers)
 }
@@ -109,8 +109,8 @@ func TestEventer_Attach_Detach(t *testing.T) {
 	e.Detach(id2)
 	a.Equal(len(ee.subscribers), 0)
 
-	// Destory
+	// Destroy
 
-	p.Destory()
+	p.Destroy()
 	e.Attach(s1)
 }

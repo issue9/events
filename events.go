@@ -22,7 +22,7 @@ import (
 	"sync"
 )
 
-// ErrStopped 表示发布都已经调用 Destory 销毁了事件处理器
+// ErrStopped 表示发布都已经调用 Destroy 销毁了事件处理器
 var ErrStopped = errors.New("该事件已经停止发布新内容")
 
 // Subscriber 订阅者函数
@@ -41,24 +41,24 @@ type event struct {
 
 // Publisher 事件的发布者
 type Publisher interface {
-	// 触发事件
+	// Publish 触发事件
 	//
 	// sync 表示订阅者是否以异步的方式执行；
 	// data 传递给订阅者的数据；
 	Publish(sync bool, data interface{}) error
 
-	// 销毁当前事件处理程序
-	Destory()
+	// Destroy 销毁当前事件处理程序
+	Destroy()
 }
 
 // Eventer 供用户订阅事件的对象接口
 type Eventer interface {
-	// 注册订阅者
+	// Attach 注册订阅者
 	//
 	// 返回唯一 ID，用户可以使用此 ID 取消订阅。
 	Attach(Subscriber) (int, error)
 
-	// 取消指定事件的订阅
+	// Detach 取消指定事件的订阅
 	Detach(int)
 }
 
@@ -101,7 +101,7 @@ func (e *event) Publish(sync bool, data interface{}) error {
 	return nil
 }
 
-func (e *event) Destory() {
+func (e *event) Destroy() {
 	e.locker.Lock()
 	e.subscribers = nil
 	e.locker.Unlock()
