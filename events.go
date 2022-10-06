@@ -2,19 +2,19 @@
 
 // Package events 提供了简单的事件发布订阅功能
 //
-//  p, e := events.New()
+//	p, e := events.New()
 //
-//  // 订阅事件
-//  e.Attach(func(data interface{}){
-//      fmt.Println("subscriber 1")
-//  })
+//	// 订阅事件
+//	e.Attach(func(data interface{}){
+//	    fmt.Println("subscriber 1")
+//	})
 //
-//  // 订阅事件
-//  e.Attach(func(data interface{}){
-//      fmt.Println("subscriber 2")
-//  })
+//	// 订阅事件
+//	e.Attach(func(data interface{}){
+//	    fmt.Println("subscriber 2")
+//	})
 //
-//  p.Publish(true, nil) // 发布事件
+//	p.Publish(true, nil) // 发布事件
 package events
 
 import (
@@ -22,7 +22,7 @@ import (
 	"sync"
 )
 
-// ErrStopped 表示发布都已经调用 Destroy 销毁了事件处理器
+// ErrStopped 表示发布都已经调用 [Publisher.Destroy] 销毁了事件处理器
 var ErrStopped = errors.New("该事件已经停止发布新内容")
 
 // Subscriber 订阅者函数
@@ -64,18 +64,18 @@ type Eventer[T any] interface {
 
 // New 声明一个新的事件处理
 //
+// T 为事件传递过程的参数类型；
 // Publisher 供事件发布者进行发布新事件；
 // Event 供订阅者订阅事件。
 func New[T any]() (Publisher[T], Eventer[T]) {
 	e := &event[T]{
 		subscribers: make(map[int]Subscriber[T], 5),
 	}
-
 	return e, e
 }
 
 func (e *event[T]) Publish(sync bool, data T) error {
-	if e.subscribers == nil { // 初如化时将 subscribers 设置为了 5，所以为 nil 表示已经调用 Destory
+	if e.subscribers == nil { // 初如化时将 subscribers 设置为了 5，所以为 nil 表示已经调用 Destroy
 		return ErrStopped
 	}
 
