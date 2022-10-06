@@ -11,29 +11,22 @@ import (
 )
 
 var (
-	s1 Subscriber[string] = func(data string) {
+	s1 SubscribeFunc[string] = func(data string) {
 		println("s1")
 	}
 
-	s2 Subscriber[string] = func(data string) {
+	s2 SubscribeFunc[string] = func(data string) {
 		println("s2")
 	}
 )
 
-func TestNew(t *testing.T) {
-	a := assert.New(t, false)
-
-	p, e := New[int]()
-	a.NotNil(p).NotNil(e)
-}
-
 func TestPublisher_Publish(t *testing.T) {
 	a := assert.New(t, false)
-	p, e := New[string]()
-	a.NotNil(p).NotNil(e)
+	e := New[string]()
+	a.NotNil(e)
 
 	// 没有订阅者
-	a.NotError(p.Publish(true, "123"))
+	a.NotError(e.Publish(true, "123"))
 
 	buf1 := new(bytes.Buffer)
 	sub1 := func(data string) {
@@ -47,7 +40,7 @@ func TestPublisher_Publish(t *testing.T) {
 
 	id1, err := e.Attach(sub1)
 	a.NotError(err)
-	p.Publish(true, "p1")
+	e.Publish(true, "p1")
 	time.Sleep(time.Microsecond * 500)
 	a.Equal(buf1.String(), "p1")
 	a.Empty(buf2.Bytes())
@@ -55,7 +48,7 @@ func TestPublisher_Publish(t *testing.T) {
 	buf1.Reset()
 	buf2.Reset()
 	e.Attach(sub2)
-	a.NotError(p.Publish(false, "p2"))
+	a.NotError(e.Publish(false, "p2"))
 	time.Sleep(time.Microsecond * 500)
 	a.Equal(buf1.String(), "p2")
 	a.Equal(buf2.String(), "p2")
@@ -63,36 +56,36 @@ func TestPublisher_Publish(t *testing.T) {
 	buf1.Reset()
 	buf2.Reset()
 	e.Detach(id1)
-	a.NotError(p.Publish(false, "p3"))
+	a.NotError(e.Publish(false, "p3"))
 	time.Sleep(time.Microsecond * 500)
 	a.Empty(buf1.String())
 	a.Equal(buf2.String(), "p3")
 
-	p.Destroy()
-	a.Error(p.Publish(false, "p4"))
+	e.Destroy()
+	a.Error(e.Publish(false, "p4"))
 }
 
 func TestPublisher_Destroy(t *testing.T) {
 	a := assert.New(t, false)
 
-	p, e := New[string]()
-	a.NotNil(p).NotNil(e)
-	p.Destroy()
+	e := New[string]()
+	a.NotNil(e)
+	e.Destroy()
 	ee, ok := e.(*(event[string]))
-	a.True(ok).NotNil(ee).Nil(ee.subscribers)
+	a.True(ok).NotNil(ee).Nil(ee.funcs)
 
-	p, e = New[string]()
-	a.NotNil(p).NotNil(e)
+	e = New[string]()
+	a.NotNil(e)
 	e.Attach(s1)
-	p.Destroy()
+	e.Destroy()
 	ee, ok = e.(*(event[string]))
-	a.True(ok).NotNil(ee).Nil(ee.subscribers)
+	a.True(ok).NotNil(ee).Nil(ee.funcs)
 }
 
-func TestEventer_Attach_Detach(t *testing.T) {
+func TestSubscriber_Attach_Detach(t *testing.T) {
 	a := assert.New(t, false)
-	p, e := New[string]()
-	a.NotNil(p).NotNil(e)
+	e := New[string]()
+	a.NotNil(e)
 
 	id1, err := e.Attach(s1)
 	a.NotError(err)
@@ -101,16 +94,16 @@ func TestEventer_Attach_Detach(t *testing.T) {
 	ee, ok := e.(*(event[string]))
 	a.True(ok).NotNil(ee)
 
-	a.Equal(len(ee.subscribers), 2)
+	a.Equal(len(ee.funcs), 2)
 
 	e.Detach(id1)
-	a.Equal(len(ee.subscribers), 1)
+	a.Equal(len(ee.funcs), 1)
 
 	e.Detach(id2)
-	a.Equal(len(ee.subscribers), 0)
+	a.Equal(len(ee.funcs), 0)
 
 	// Destroy
 
-	p.Destroy()
+	e.Destroy()
 	e.Attach(s1)
 }

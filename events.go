@@ -25,18 +25,18 @@ import (
 // ErrStopped 表示发布都已经调用 [Publisher.Destroy] 销毁了事件处理器
 var ErrStopped = errors.New("该事件已经停止发布新内容")
 
-// Subscriber 订阅者函数
+// SubscribeFunc 订阅者函数
 //
 // 每个订阅函数都是通过 go 异步执行。
 //
 // data 为事件传递过来的数据，可能存在多个订阅者，
 // 用户不应该直接修改 data 数据，否则结果是未知的。
-type Subscriber[T any] func(data T)
+type SubscribeFunc[T any] func(data T)
 
 type event[T any] struct {
-	locker      sync.RWMutex
-	count       int
-	subscribers map[int]Subscriber[T]
+	locker sync.RWMutex
+	count  int
+	funcs  map[int]SubscribeFunc[T]
 }
 
 // Publisher 事件的发布者
@@ -51,49 +51,51 @@ type Publisher[T any] interface {
 	Destroy()
 }
 
-// Eventer 供用户订阅事件的对象接口
-type Eventer[T any] interface {
+// Subscriber 供用户订阅事件的对象接口
+type Subscriber[T any] interface {
 	// Attach 注册订阅者
 	//
 	// 返回唯一 ID，用户可以使用此 ID 取消订阅。
-	Attach(Subscriber[T]) (int, error)
+	Attach(SubscribeFunc[T]) (int, error)
 
 	// Detach 取消指定事件的订阅
 	Detach(int)
 }
 
+type Eventer[T any] interface {
+	Publisher[T]
+	Subscriber[T]
+}
+
 // New 声明一个新的事件处理
 //
 // T 为事件传递过程的参数类型；
-// Publisher 供事件发布者进行发布新事件；
-// Event 供订阅者订阅事件。
-func New[T any]() (Publisher[T], Eventer[T]) {
-	e := &event[T]{
-		subscribers: make(map[int]Subscriber[T], 5),
+func New[T any]() Eventer[T] {
+	return &event[T]{
+		funcs: make(map[int]SubscribeFunc[T], 5),
 	}
-	return e, e
 }
 
 func (e *event[T]) Publish(sync bool, data T) error {
-	if e.subscribers == nil { // 初如化时将 subscribers 设置为了 5，所以为 nil 表示已经调用 Destroy
+	if e.funcs == nil { // 初如化时将 e.funcs 设置为了 5，所以为 nil 表示已经调用 [Publisher.Destroy]
 		return ErrStopped
 	}
 
 	e.locker.RLock()
 	defer e.locker.RUnlock()
 
-	if len(e.subscribers) == 0 {
+	if len(e.funcs) == 0 {
 		return nil
 	}
 
 	if sync {
-		for _, s := range e.subscribers {
-			go func(sub Subscriber[T]) {
+		for _, s := range e.funcs {
+			go func(sub SubscribeFunc[T]) {
 				sub(data)
 			}(s)
 		}
 	} else {
-		for _, s := range e.subscribers {
+		for _, s := range e.funcs {
 			s(data)
 		}
 	}
@@ -103,12 +105,12 @@ func (e *event[T]) Publish(sync bool, data T) error {
 
 func (e *event[T]) Destroy() {
 	e.locker.Lock()
-	e.subscribers = nil
+	e.funcs = nil
 	e.locker.Unlock()
 }
 
-func (e *event[T]) Attach(subscriber Subscriber[T]) (int, error) {
-	if e.subscribers == nil {
+func (e *event[T]) Attach(subscriber SubscribeFunc[T]) (int, error) {
+	if e.funcs == nil {
 		return 0, ErrStopped
 	}
 
@@ -116,7 +118,7 @@ func (e *event[T]) Attach(subscriber Subscriber[T]) (int, error) {
 
 	e.locker.Lock()
 	e.count++
-	e.subscribers[ret] = subscriber
+	e.funcs[ret] = subscriber
 	e.locker.Unlock()
 
 	return ret, nil
@@ -124,6 +126,6 @@ func (e *event[T]) Attach(subscriber Subscriber[T]) (int, error) {
 
 func (e *event[T]) Detach(id int) {
 	e.locker.Lock()
-	delete(e.subscribers, id)
+	delete(e.funcs, id)
 	e.locker.Unlock()
 }
