@@ -2,19 +2,19 @@
 
 // Package events 提供了简单的事件发布订阅功能
 //
-//	p, e := events.New()
+//	e := events.New[string]()
 //
 //	// 订阅事件
-//	e.Attach(func(data interface{}){
-//	    fmt.Println("subscriber 1")
+//	e.Attach(func(data string){
+//	    fmt.Println("subscriber 1:", data)
 //	})
 //
 //	// 订阅事件
-//	e.Attach(func(data interface{}){
-//	    fmt.Println("subscriber 2")
+//	e.Attach(func(data string){
+//	    fmt.Println("subscriber 2:", data)
 //	})
 //
-//	p.Publish(true, nil) // 发布事件
+//	e.Publish(true, "test") // 发布事件
 package events
 
 import (

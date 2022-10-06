@@ -8,12 +8,12 @@ events
 简单的事件订阅发布系统
 
 ```go
-p, e := events.New()
+e := events.New[string]()
 
 e.Attach(sub1)
 e.Attach(sub2)
 
-p.Publish(true, "触发事件1") // sub1 和 sub2 均会收事事件
+e.Publish(true, "触发事件1") // sub1 和 sub2 均会收事事件
 ```
 
 安装
