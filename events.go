@@ -22,8 +22,7 @@ import (
 	"sync"
 )
 
-// ErrStopped 表示发布都已经调用 [Publisher.Destroy] 销毁了事件处理器
-var ErrStopped = errors.New("该事件已经停止发布新内容")
+var errStopped = errors.New("events: stopped")
 
 // SubscribeFunc 订阅者函数
 //
@@ -67,6 +66,9 @@ type Eventer[T any] interface {
 	Subscriber[T]
 }
 
+// errStopped 表示发布都已经调用 [Publisher.Destroy] 销毁了事件处理器
+func ErrStopped() error { return errStopped }
+
 // New 声明一个新的事件处理
 //
 // T 为事件传递过程的参数类型；
@@ -77,8 +79,10 @@ func New[T any]() Eventer[T] {
 }
 
 func (e *event[T]) Publish(sync bool, data T) error {
-	if e.funcs == nil { // 初如化时将 e.funcs 设置为了 5，所以为 nil 表示已经调用 [Publisher.Destroy]
-		return ErrStopped
+	// 初如化时将 e.funcs 设置为了非 nil 状态，
+	// 所以为 nil 表示已经调用 [Publisher.Destroy]
+	if e.funcs == nil {
+		return ErrStopped()
 	}
 
 	e.locker.RLock()
@@ -111,7 +115,7 @@ func (e *event[T]) Destroy() {
 
 func (e *event[T]) Attach(subscriber SubscribeFunc[T]) (int, error) {
 	if e.funcs == nil {
-		return 0, ErrStopped
+		return 0, ErrStopped()
 	}
 
 	ret := e.count
