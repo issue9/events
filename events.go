@@ -1,3 +1,5 @@
+// SPDX-FileCopyrightText: 2019-2024 caixw
+//
 // SPDX-License-Identifier: MIT
 
 // Package events 提供了简单的事件发布订阅功能
