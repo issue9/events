@@ -13,14 +13,13 @@ import (
 )
 
 var (
-	s1 SubscribeFunc[string] = func(data string) {
-		println("s1")
-	}
-
-	s2 SubscribeFunc[string] = func(data string) {
-		println("s2")
-	}
+	_ Publisher[int]  = &Event[int]{}
+	_ Subscriber[int] = &Event[int]{}
 )
+
+func s1(data string) { println("s1") }
+
+func s2(data string) { println("s2") }
 
 func TestPublisher_Publish(t *testing.T) {
 	a := assert.New(t, false)
@@ -35,8 +34,8 @@ func TestPublisher_Publish(t *testing.T) {
 		buf1.WriteString(data)
 	}
 
-	c1, err := e.Subscribe(sub1)
-	a.NotError(err).NotNil(c1)
+	c1 := e.Subscribe(sub1)
+	a.NotNil(c1)
 	e.Publish(true, "p1")
 	time.Sleep(time.Microsecond * 500)
 	a.Equal(buf1.String(), "p1")
@@ -60,6 +59,9 @@ func TestPublisher_Publish(t *testing.T) {
 	time.Sleep(time.Microsecond * 500)
 	a.Empty(buf1.String())
 	a.Equal(buf2.String(), "p3")
+
+	e.Reset()
+	a.Zero(e.len())
 }
 
 func TestPublisher_Destroy(t *testing.T) {
@@ -67,14 +69,12 @@ func TestPublisher_Destroy(t *testing.T) {
 
 	e := New[string]()
 	a.NotNil(e)
-	ee, ok := e.(*(event[string]))
-	a.True(ok).NotNil(ee).Zero(ee.len())
+	a.Zero(e.len())
 
 	e = New[string]()
 	a.NotNil(e)
 	e.Subscribe(s1)
-	ee, ok = e.(*(event[string]))
-	a.True(ok).NotNil(ee).Equal(ee.len(), 1)
+	a.Equal(e.len(), 1)
 }
 
 func TestSubscriber_Attach_Detach(t *testing.T) {
@@ -82,24 +82,20 @@ func TestSubscriber_Attach_Detach(t *testing.T) {
 	e := New[string]()
 	a.NotNil(e)
 
-	c1, err := e.Subscribe(s1)
-	a.NotError(err)
-	c2, err := e.Subscribe(s2)
-	a.NotError(err)
-	ee, ok := e.(*(event[string]))
-	a.True(ok).NotNil(ee)
+	c1 := e.Subscribe(s1)
+	c2 := e.Subscribe(s2)
 
-	a.Equal(ee.len(), 2)
+	a.Equal(e.len(), 2)
 
 	c1()
-	a.Equal(ee.len(), 1)
+	a.Equal(e.len(), 1)
 
 	c2()
-	a.Equal(ee.len(), 0)
+	a.Equal(e.len(), 0)
 }
 
-func (e *event[T]) len() (c int) {
-	e.funcs.Range(func(key, value any) bool {
+func (e *Event[T]) len() (c int) {
+	e.subscribers.Range(func(key, value any) bool {
 		c++
 		return true
 	})
