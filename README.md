@@ -10,8 +10,8 @@ events
 ```go
 e := events.New[string]()
 
-e.Attach(sub1)
-e.Attach(sub2)
+e.Subscribe(sub1)
+e.Subscribe(sub2)
 
 e.Publish(true, "触发事件1") // sub1 和 sub2 均会收事事件
 ```

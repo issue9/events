@@ -28,43 +28,38 @@ func TestPublisher_Publish(t *testing.T) {
 	a.NotNil(e)
 
 	// 没有订阅者
-	a.NotError(e.Publish(true, "123"))
+	e.Publish(true, "123")
 
 	buf1 := new(bytes.Buffer)
 	sub1 := func(data string) {
 		buf1.WriteString(data)
 	}
 
+	c1, err := e.Subscribe(sub1)
+	a.NotError(err).NotNil(c1)
+	e.Publish(true, "p1")
+	time.Sleep(time.Microsecond * 500)
+	a.Equal(buf1.String(), "p1")
+
+	buf1.Reset()
 	buf2 := new(bytes.Buffer)
 	sub2 := func(data string) {
 		buf2.WriteString(data)
 	}
-
-	id1, err := e.Attach(sub1)
-	a.NotError(err)
-	e.Publish(true, "p1")
-	time.Sleep(time.Microsecond * 500)
-	a.Equal(buf1.String(), "p1")
 	a.Empty(buf2.Bytes())
-
-	buf1.Reset()
-	buf2.Reset()
-	e.Attach(sub2)
-	a.NotError(e.Publish(false, "p2"))
+	e.Subscribe(sub2)
+	e.Publish(false, "p2")
 	time.Sleep(time.Microsecond * 500)
 	a.Equal(buf1.String(), "p2")
 	a.Equal(buf2.String(), "p2")
 
 	buf1.Reset()
 	buf2.Reset()
-	e.Detach(id1)
-	a.NotError(e.Publish(false, "p3"))
+	c1()
+	e.Publish(false, "p3")
 	time.Sleep(time.Microsecond * 500)
 	a.Empty(buf1.String())
 	a.Equal(buf2.String(), "p3")
-
-	e.Destroy()
-	a.Error(e.Publish(false, "p4"))
 }
 
 func TestPublisher_Destroy(t *testing.T) {
@@ -72,16 +67,14 @@ func TestPublisher_Destroy(t *testing.T) {
 
 	e := New[string]()
 	a.NotNil(e)
-	e.Destroy()
 	ee, ok := e.(*(event[string]))
-	a.True(ok).NotNil(ee).Nil(ee.funcs)
+	a.True(ok).NotNil(ee).Zero(ee.len())
 
 	e = New[string]()
 	a.NotNil(e)
-	e.Attach(s1)
-	e.Destroy()
+	e.Subscribe(s1)
 	ee, ok = e.(*(event[string]))
-	a.True(ok).NotNil(ee).Nil(ee.funcs)
+	a.True(ok).NotNil(ee).Equal(ee.len(), 1)
 }
 
 func TestSubscriber_Attach_Detach(t *testing.T) {
@@ -89,23 +82,26 @@ func TestSubscriber_Attach_Detach(t *testing.T) {
 	e := New[string]()
 	a.NotNil(e)
 
-	id1, err := e.Attach(s1)
+	c1, err := e.Subscribe(s1)
 	a.NotError(err)
-	id2, err := e.Attach(s2)
+	c2, err := e.Subscribe(s2)
 	a.NotError(err)
 	ee, ok := e.(*(event[string]))
 	a.True(ok).NotNil(ee)
 
-	a.Equal(len(ee.funcs), 2)
+	a.Equal(ee.len(), 2)
 
-	e.Detach(id1)
-	a.Equal(len(ee.funcs), 1)
+	c1()
+	a.Equal(ee.len(), 1)
 
-	e.Detach(id2)
-	a.Equal(len(ee.funcs), 0)
+	c2()
+	a.Equal(ee.len(), 0)
+}
 
-	// Destroy
-
-	e.Destroy()
-	e.Attach(s1)
+func (e *event[T]) len() (c int) {
+	e.funcs.Range(func(key, value any) bool {
+		c++
+		return true
+	})
+	return
 }
