@@ -86,9 +86,19 @@ func (e *Event[T]) Subscribe(subscriber SubscribeFunc[T]) context.CancelFunc {
 	return func() { e.subscribers.Delete(ptr) }
 }
 
+// Reset 重置对象
 func (e *Event[T]) Reset() {
 	e.subscribers.Range(func(key, _ any) bool {
 		e.subscribers.Delete(key)
 		return true
 	})
+}
+
+// Len 订阅者的数量
+func (e *Event[T]) Len() (c int) {
+	e.subscribers.Range(func(key, value any) bool {
+		c++
+		return true
+	})
+	return
 }
