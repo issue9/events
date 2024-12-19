@@ -22,7 +22,8 @@ package events
 import (
 	"context"
 	"reflect"
-	"sync"
+
+	"github.com/puzpuzpuz/xsync/v3"
 )
 
 type (
@@ -53,7 +54,7 @@ type (
 	//
 	// 同时实现了 [Subscriber] 和 [Publisher] 两个接口。
 	Event[T any] struct {
-		subscribers *sync.Map
+		subscribers *xsync.MapOf[uintptr, SubscribeFunc[T]]
 	}
 )
 
@@ -62,19 +63,19 @@ type (
 // T 为事件传递过程的参数类型；
 func New[T any]() *Event[T] {
 	return &Event[T]{
-		subscribers: &sync.Map{},
+		subscribers: xsync.NewMapOf[uintptr, SubscribeFunc[T]](),
 	}
 }
 
 func (e *Event[T]) Publish(sync bool, data T) {
 	if sync {
-		e.subscribers.Range(func(key, value any) bool {
-			go func(sub SubscribeFunc[T]) { sub(data) }(value.(SubscribeFunc[T]))
+		e.subscribers.Range(func(key uintptr, value SubscribeFunc[T]) bool {
+			go func(sub SubscribeFunc[T]) { sub(data) }(value)
 			return true
 		})
 	} else {
-		e.subscribers.Range(func(key, value any) bool {
-			value.(SubscribeFunc[T])(data)
+		e.subscribers.Range(func(key uintptr, value SubscribeFunc[T]) bool {
+			value(data)
 			return true
 		})
 	}
@@ -88,17 +89,11 @@ func (e *Event[T]) Subscribe(subscriber SubscribeFunc[T]) context.CancelFunc {
 
 // Reset 重置对象
 func (e *Event[T]) Reset() {
-	e.subscribers.Range(func(key, _ any) bool {
+	e.subscribers.Range(func(key uintptr, _ SubscribeFunc[T]) bool {
 		e.subscribers.Delete(key)
 		return true
 	})
 }
 
 // Len 订阅者的数量
-func (e *Event[T]) Len() (c int) {
-	e.subscribers.Range(func(key, value any) bool {
-		c++
-		return true
-	})
-	return
-}
+func (e *Event[T]) Len() (c int) { return e.subscribers.Size() }
