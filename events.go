@@ -1,4 +1,4 @@
-// SPDX-FileCopyrightText: 2019-2024 caixw
+// SPDX-FileCopyrightText: 2019-2025 caixw
 //
 // SPDX-License-Identifier: MIT
 
@@ -23,7 +23,7 @@ import (
 	"context"
 	"reflect"
 
-	"github.com/puzpuzpuz/xsync/v3"
+	"github.com/puzpuzpuz/xsync/v4"
 )
 
 type (
@@ -54,7 +54,7 @@ type (
 	//
 	// 同时实现了 [Subscriber] 和 [Publisher] 两个接口。
 	Event[T any] struct {
-		subscribers *xsync.MapOf[uintptr, SubscribeFunc[T]]
+		subscribers *xsync.Map[uintptr, SubscribeFunc[T]]
 	}
 )
 
@@ -63,7 +63,7 @@ type (
 // T 为事件传递过程的参数类型；
 func New[T any]() *Event[T] {
 	return &Event[T]{
-		subscribers: xsync.NewMapOf[uintptr, SubscribeFunc[T]](),
+		subscribers: xsync.NewMap[uintptr, SubscribeFunc[T]](),
 	}
 }
 
